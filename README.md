@@ -52,10 +52,38 @@ tinymce.init({
     emoji_show_groups: false,   // hides the tabs and dsiplays all emojis on one page
     emoji_show_subgroups: false,    // hides the subheadings
     emoji_show_tab_icons: false, // hides the icon on each tab label
+    emoji_dialog_width: 1000, //dialog width, by default 1000 if emoji_show_tab_icons is true, 800 otherwise
+    emoji_dialog_height: 500, //600 by default,
     ...
 })
 ```
 *NOTE: by default, all options above are set to `true`*
+
+### Twemoji
+
+You can configure plugin to display [twemoji](https://github.com/twitter/twemoji) instead of default
+browser's emojis. Note that default emojis will be shown **only** in editor and dialog. 
+Native utf-8 emojis will be inserted into resulting code and displayed on your website. If you want 
+to display twemojis on your website, you need to do integration of your website with twemoji. 
+These options just to help you to make editor consistent with your website (with integrated twemoji).
+
+```JavaScript
+tinymce.init({
+    plugins: [
+        'tinymceEmoji'
+    ],
+    toolbar: 'tinymceEmoji',
+    emoji_show_twemoji: true, //Show twemoji in dialog and editor
+    emoji_twemoji_size: 72, //size of twemojis in dialog and editor, 36 by default
+    emoji_twemoji_button_size: 24, //16 by default, size of plugin button's icon,
+    emoji_twemoji_attrs: {}, //custom attributes for twemoji images. You can't set src, alt, className, draggable
+    emoji_twemoji_base: undefined, //base url for twemoji images, by default twitter's cdn, look into twemoji's repo for details
+    emoji_twemoji_ext: '.svg', //.png by default, would not work without correct folder (72x72 for png or svg for svg)
+    emoji_twemoji_folder: 'svg', //72x72 by default
+    emoji_twemoji_class_name: 'twemoji', //img's class name, emoji by default
+    ...
+})
+```
 
 ### A note about speed
 Unfortunately, the first time you load the emoji dialog during each editor session, it takes a few seconds to display, during which time the browser window is frozen. I have been unable to resolve this issue and the [world's worst docs](https://www.tinymce.com/docs/api/tinymce.ui) didn't help. If you're a developer who knows how to resolve this, please do make a PR!

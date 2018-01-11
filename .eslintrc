@@ -54,7 +54,7 @@
     "semi": [2, "always"],
     "indent": ["error", 2, {"SwitchCase": 1}],
     "curly": [2, "all"],
-    "dot-notation": [2, {"allowKeywords": false}],
+    "dot-notation": [2],
     "no-else-return": 0,
     "no-eval": 2,
     "no-implied-eval": 2,
