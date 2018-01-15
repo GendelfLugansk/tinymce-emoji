@@ -81,13 +81,17 @@ var _emoji = __webpack_require__(1);
 
 var _emoji2 = _interopRequireDefault(_emoji);
 
-var _twemoji = __webpack_require__(4);
+var _twemoji = __webpack_require__(5);
 
 var _twemoji2 = _interopRequireDefault(_twemoji);
 
 var _domify = __webpack_require__(3);
 
 var _domify2 = _interopRequireDefault(_domify);
+
+var _objectPath = __webpack_require__(4);
+
+var _objectPath2 = _interopRequireDefault(_objectPath);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -132,9 +136,9 @@ var plugin = function plugin(editor) {
     twemoji_size = editor.settings.emoji_twemoji_size;
   }
 
-  var twemoji_button_size = 16;
-  if ("emoji_twemoji_button_size" in editor.settings) {
-    twemoji_button_size = editor.settings.emoji_twemoji_button_size;
+  var twemoji_preview_size = 72;
+  if ("emoji_twemoji_preview_size" in editor.settings) {
+    twemoji_preview_size = editor.settings.emoji_twemoji_preview_size;
   }
 
   var twemoji_attrs = {};
@@ -188,161 +192,215 @@ var plugin = function plugin(editor) {
     folder: twemoji_folder
   };
 
-  var twemoji_params_button = JSON.parse(JSON.stringify(twemoji_params));
-  twemoji_params_button.attributes = function () {
+  var twemoji_params_preview = JSON.parse(JSON.stringify(twemoji_params));
+  twemoji_params_preview.attributes = function () {
     var attrs = JSON.parse(JSON.stringify(twemoji_attrs));
-    attrs.style = appendStyle(attrs.style, 'width: ' + twemoji_button_size + 'px; height: ' + twemoji_button_size + 'px;');
+    attrs.style = appendStyle(attrs.style, 'width: ' + twemoji_preview_size + 'px; height: ' + twemoji_preview_size + 'px;');
 
     return attrs;
   };
 
-  var getBody = new Promise(function (resolve, reject) {
-    try {
-      var onclick = function onclick(e) {
-        var target = e.target;
-        var span = void 0;
-        if (/^(SPAN)$/.test(target.nodeName)) {
-          span = target;
-        } else if (/^(IMG)$/.test(target.nodeName) && target.classList && target.classList.contains(twemoji_class_name)) {
-          span = target.closest('span');
+  function getItems() {
+    var onclick = function onclick(e) {
+      var target = e.target;
+      var span = void 0;
+      if (/^(SPAN)$/.test(target.nodeName)) {
+        span = target;
+      } else if (/^(IMG)$/.test(target.nodeName) && target.classList && target.classList.contains(twemoji_class_name)) {
+        span = target.closest('span');
+      }
+      if (span) {
+        if (span.hasAttribute('data-chr')) {
+          var char = span.getAttribute('data-chr');
+          editor.execCommand('mceInsertContent', false, char + (add_space ? ' ' : ''));
         }
-        if (span) {
-          if (span.hasAttribute('data-chr')) {
-            var char = span.getAttribute('data-chr');
-            editor.execCommand('mceInsertContent', false, char + (add_space ? ' ' : ''));
-          }
-        }
-      };
-      var body = [];
-      var groupHtml = show_groups ? '' : '<div style="padding: 10px;">';
-      var _iteratorNormalCompletion = true;
-      var _didIteratorError = false;
-      var _iteratorError = undefined;
+      }
+    };
 
-      try {
-        for (var _iterator = _emoji2.default[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-          var group = _step.value;
+    var onmouseover = function onmouseover(e) {
+      if (!show_twemoji) {
+        return;
+      }
 
-          groupHtml = show_groups ? '<div style="padding: 10px;">' : groupHtml;
-          var tabIcon = '';
-          var _iteratorNormalCompletion2 = true;
-          var _didIteratorError2 = false;
-          var _iteratorError2 = undefined;
-
-          try {
-            for (var _iterator2 = group.subGroups[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-              var subgroup = _step2.value;
-
-              groupHtml += show_subgroups ? '<p style="clear:both"><strong style="font-weight: bold;">' + subgroup.name.split('-').join(' ').replace(/\b\w/g, function (l) {
-                return l.toUpperCase();
-              }) + '</strong><br/>' : '';
-              var _iteratorNormalCompletion3 = true;
-              var _didIteratorError3 = false;
-              var _iteratorError3 = undefined;
-
-              try {
-                for (var _iterator3 = subgroup.emojis[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-                  var emoji = _step3.value;
-
-                  if (tabIcon === '') {
-                    tabIcon = emoji.emoji;
-                  }
-                  groupHtml += '<span style="float:left; padding: 4px; font-size: 1.5em; cursor: pointer;" data-chr="' + emoji.emoji + '">' + (show_twemoji ? _twemoji2.default.parse(emoji.emoji, twemoji_params) : emoji.emoji) + '</span>';
-                }
-              } catch (err) {
-                _didIteratorError3 = true;
-                _iteratorError3 = err;
-              } finally {
-                try {
-                  if (!_iteratorNormalCompletion3 && _iterator3.return) {
-                    _iterator3.return();
-                  }
-                } finally {
-                  if (_didIteratorError3) {
-                    throw _iteratorError3;
-                  }
-                }
-              }
-
-              groupHtml += '</p>';
+      var target = e.target;
+      if (/^(SPAN)$/.test(target.nodeName) && target.hasAttribute('data-chr')) {
+        var body = target.closest('.mce-window-body');
+        if (body) {
+          var previewZone = body.querySelector('.tinymce-emoji-preview');
+          if (previewZone) {
+            var img = (0, _domify2.default)(_twemoji2.default.parse(target.getAttribute('data-chr'), twemoji_params_preview));
+            var oldImg = previewZone.querySelector('img');
+            if (oldImg) {
+              previewZone.replaceChild(img, oldImg);
+            } else {
+              previewZone.appendChild(img);
             }
-          } catch (err) {
-            _didIteratorError2 = true;
-            _iteratorError2 = err;
-          } finally {
-            try {
-              if (!_iteratorNormalCompletion2 && _iterator2.return) {
-                _iterator2.return();
-              }
-            } finally {
-              if (_didIteratorError2) {
-                throw _iteratorError2;
-              }
-            }
-          }
-
-          groupHtml += show_groups ? '</div>' : '';
-          if (show_groups) {
-            body.push({
-              type: 'container',
-              title: (show_tab_icons ? tabIcon + ' ' : '') + group.name,
-              html: groupHtml,
-              onclick: onclick
-            });
-          }
-        }
-      } catch (err) {
-        _didIteratorError = true;
-        _iteratorError = err;
-      } finally {
-        try {
-          if (!_iteratorNormalCompletion && _iterator.return) {
-            _iterator.return();
-          }
-        } finally {
-          if (_didIteratorError) {
-            throw _iteratorError;
           }
         }
       }
+    };
 
-      if (!show_groups) {
-        groupHtml += '</div>';
-        body.push({
-          type: 'container',
-          html: groupHtml,
-          onclick: onclick
-        });
-      }
-      resolve(body);
-    } catch (error) {
-      reject(error);
+    var items = [];
+
+    if (show_twemoji) {
+      var previewPanel = new tinymce.ui.FloatPanel({
+        type: 'floatPanel',
+        title: 'Preview',
+        html: '<div class="tinymce-emoji-preview" style="text-align: center; padding: 10px; height: ' + twemoji_preview_size + 'px">' + _twemoji2.default.parse(_objectPath2.default.get(_emoji2.default, '0.subGroups.0.emojis.0.emoji', ''), twemoji_params_preview) + '</div>',
+        style: "top: auto; position: fixed;"
+      });
+      previewPanel.on('postrender', function (e) {
+        if (e.target && e.target.$el && e.target.$el[0]) {
+
+          /**
+           * As I have no f🤬ing idea at what moment tinymce changes top to 0px, I'll use timer
+           */
+          var el = e.target.$el[0];
+          var updater = function updater() {
+            if (el && el.style && el.parentNode) {
+              el.style.top = "auto";
+              setTimeout(updater, 100);
+            } else {
+              el = null;
+            }
+          };
+          updater();
+        }
+      });
+      items.push(previewPanel);
     }
-  });
+
+    var tabItems = [];
+    var containerHTML = '';
+    var _iteratorNormalCompletion = true;
+    var _didIteratorError = false;
+    var _iteratorError = undefined;
+
+    try {
+      for (var _iterator = _emoji2.default[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+        var group = _step.value;
+
+        var groupHTML = '';
+
+        var _iteratorNormalCompletion2 = true;
+        var _didIteratorError2 = false;
+        var _iteratorError2 = undefined;
+
+        try {
+          for (var _iterator2 = group.subGroups[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+            var subgroup = _step2.value;
+
+            if (show_subgroups) {
+              groupHTML += '<div style="clear:both"><strong style="font-weight: bold;">' + subgroup.name.split('-').join(' ').replace(/\b\w/g, function (l) {
+                return l.toUpperCase();
+              }) + '</strong></div>';
+            }
+
+            groupHTML += '<div>';
+            var _iteratorNormalCompletion3 = true;
+            var _didIteratorError3 = false;
+            var _iteratorError3 = undefined;
+
+            try {
+              for (var _iterator3 = subgroup.emojis[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+                var emoji = _step3.value;
+
+                groupHTML += '<span style="float:left; padding: 4px; font-size: 1.5em; cursor: pointer;" data-chr="' + emoji.emoji + '">' + emoji.emoji + '</span>';
+              }
+            } catch (err) {
+              _didIteratorError3 = true;
+              _iteratorError3 = err;
+            } finally {
+              try {
+                if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                  _iterator3.return();
+                }
+              } finally {
+                if (_didIteratorError3) {
+                  throw _iteratorError3;
+                }
+              }
+            }
+
+            groupHTML += '</div>';
+          }
+        } catch (err) {
+          _didIteratorError2 = true;
+          _iteratorError2 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion2 && _iterator2.return) {
+              _iterator2.return();
+            }
+          } finally {
+            if (_didIteratorError2) {
+              throw _iteratorError2;
+            }
+          }
+        }
+
+        if (show_groups) {
+          tabItems.push({
+            type: 'container',
+            title: show_tab_icons ? _objectPath2.default.get(group, 'subGroups.0.emojis.0.emoji', '') + ' ' + group.name : group.name,
+            html: '<div style="padding: 10px;">' + groupHTML + '</div>'
+          });
+        } else {
+          containerHTML += groupHTML;
+        }
+      }
+    } catch (err) {
+      _didIteratorError = true;
+      _iteratorError = err;
+    } finally {
+      try {
+        if (!_iteratorNormalCompletion && _iterator.return) {
+          _iterator.return();
+        }
+      } finally {
+        if (_didIteratorError) {
+          throw _iteratorError;
+        }
+      }
+    }
+
+    if (show_groups) {
+      items.push({
+        type: 'tabPanel',
+        items: tabItems,
+        onclick: onclick,
+        onmouseover: onmouseover
+      });
+    } else {
+      items.push({
+        type: 'container',
+        html: '<div style="padding: 10px;">' + containerHTML + '</div>',
+        onclick: onclick,
+        onmouseover: onmouseover
+      });
+    }
+
+    return items;
+  }
 
   var default_dialog_width = show_tab_icons ? 1000 : 800;
 
   function showDialog() {
-    getBody.then(function (body) {
-      var win = editor.windowManager.open({
-        autoScroll: true,
-        width: dialog_width ? dialog_width : default_dialog_width,
-        height: dialog_height ? dialog_height : 600,
-        title: 'Insert Emoji',
-        bodyType: show_groups ? 'tabPanel' : 'container',
-        layout: 'fit',
-        body: body,
-        buttons: [{
-          text: 'Close',
-          onclick: function onclick() {
-            win.close();
-          }
-        }]
-      });
-    }).catch(function (error) {
-      /*eslint-disable no-console*/
-      console.log(error);
-      /*eslint-enable no-console*/
+    var win = editor.windowManager.open({
+      autoScroll: true,
+      width: dialog_width ? dialog_width : default_dialog_width,
+      height: dialog_height ? dialog_height : 600,
+      title: 'Insert Emoji',
+      layout: 'flex',
+      direction: 'column',
+      align: 'stretch',
+      items: getItems(),
+      buttons: [{
+        text: 'Close',
+        onclick: function onclick() {
+          win.close();
+        }
+      }]
     });
   }
 
@@ -351,12 +409,7 @@ var plugin = function plugin(editor) {
   editor.addButton('tinymceEmoji', {
     text: '😀',
     icon: false,
-    cmd: 'emojiShowDialog',
-    onpostrender: function onpostrender(e) {
-      if (show_twemoji && e.target && e.target.$el && e.target.$el[0]) {
-        _twemoji2.default.parse(e.target.$el[0], twemoji_params_button);
-      }
-    }
+    cmd: 'emojiShowDialog'
   });
 
   editor.addMenuItem('tinymceEmoji', {
@@ -11405,6 +11458,307 @@ function parse(html, doc) {
 
 /***/ }),
 /* 4 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function (root, factory){
+  'use strict';
+
+  /*istanbul ignore next:cant test*/
+  if (typeof module === 'object' && typeof module.exports === 'object') {
+    module.exports = factory();
+  } else if (true) {
+    // AMD. Register as an anonymous module.
+    !(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory),
+				__WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ?
+				(__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+  } else {
+    // Browser globals
+    root.objectPath = factory();
+  }
+})(this, function(){
+  'use strict';
+
+  var toStr = Object.prototype.toString;
+  function hasOwnProperty(obj, prop) {
+    if(obj == null) {
+      return false
+    }
+    //to handle objects with null prototypes (too edge case?)
+    return Object.prototype.hasOwnProperty.call(obj, prop)
+  }
+
+  function isEmpty(value){
+    if (!value) {
+      return true;
+    }
+    if (isArray(value) && value.length === 0) {
+        return true;
+    } else if (typeof value !== 'string') {
+        for (var i in value) {
+            if (hasOwnProperty(value, i)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    return false;
+  }
+
+  function toString(type){
+    return toStr.call(type);
+  }
+
+  function isObject(obj){
+    return typeof obj === 'object' && toString(obj) === "[object Object]";
+  }
+
+  var isArray = Array.isArray || function(obj){
+    /*istanbul ignore next:cant test*/
+    return toStr.call(obj) === '[object Array]';
+  }
+
+  function isBoolean(obj){
+    return typeof obj === 'boolean' || toString(obj) === '[object Boolean]';
+  }
+
+  function getKey(key){
+    var intKey = parseInt(key);
+    if (intKey.toString() === key) {
+      return intKey;
+    }
+    return key;
+  }
+
+  function factory(options) {
+    options = options || {}
+
+    var objectPath = function(obj) {
+      return Object.keys(objectPath).reduce(function(proxy, prop) {
+        if(prop === 'create') {
+          return proxy;
+        }
+
+        /*istanbul ignore else*/
+        if (typeof objectPath[prop] === 'function') {
+          proxy[prop] = objectPath[prop].bind(objectPath, obj);
+        }
+
+        return proxy;
+      }, {});
+    };
+
+    function hasShallowProperty(obj, prop) {
+      return (options.includeInheritedProps || (typeof prop === 'number' && Array.isArray(obj)) || hasOwnProperty(obj, prop))
+    }
+
+    function getShallowProperty(obj, prop) {
+      if (hasShallowProperty(obj, prop)) {
+        return obj[prop];
+      }
+    }
+
+    function set(obj, path, value, doNotReplace){
+      if (typeof path === 'number') {
+        path = [path];
+      }
+      if (!path || path.length === 0) {
+        return obj;
+      }
+      if (typeof path === 'string') {
+        return set(obj, path.split('.').map(getKey), value, doNotReplace);
+      }
+      var currentPath = path[0];
+      var currentValue = getShallowProperty(obj, currentPath);
+      if (path.length === 1) {
+        if (currentValue === void 0 || !doNotReplace) {
+          obj[currentPath] = value;
+        }
+        return currentValue;
+      }
+
+      if (currentValue === void 0) {
+        //check if we assume an array
+        if(typeof path[1] === 'number') {
+          obj[currentPath] = [];
+        } else {
+          obj[currentPath] = {};
+        }
+      }
+
+      return set(obj[currentPath], path.slice(1), value, doNotReplace);
+    }
+
+    objectPath.has = function (obj, path) {
+      if (typeof path === 'number') {
+        path = [path];
+      } else if (typeof path === 'string') {
+        path = path.split('.');
+      }
+
+      if (!path || path.length === 0) {
+        return !!obj;
+      }
+
+      for (var i = 0; i < path.length; i++) {
+        var j = getKey(path[i]);
+
+        if((typeof j === 'number' && isArray(obj) && j < obj.length) ||
+          (options.includeInheritedProps ? (j in Object(obj)) : hasOwnProperty(obj, j))) {
+          obj = obj[j];
+        } else {
+          return false;
+        }
+      }
+
+      return true;
+    };
+
+    objectPath.ensureExists = function (obj, path, value){
+      return set(obj, path, value, true);
+    };
+
+    objectPath.set = function (obj, path, value, doNotReplace){
+      return set(obj, path, value, doNotReplace);
+    };
+
+    objectPath.insert = function (obj, path, value, at){
+      var arr = objectPath.get(obj, path);
+      at = ~~at;
+      if (!isArray(arr)) {
+        arr = [];
+        objectPath.set(obj, path, arr);
+      }
+      arr.splice(at, 0, value);
+    };
+
+    objectPath.empty = function(obj, path) {
+      if (isEmpty(path)) {
+        return void 0;
+      }
+      if (obj == null) {
+        return void 0;
+      }
+
+      var value, i;
+      if (!(value = objectPath.get(obj, path))) {
+        return void 0;
+      }
+
+      if (typeof value === 'string') {
+        return objectPath.set(obj, path, '');
+      } else if (isBoolean(value)) {
+        return objectPath.set(obj, path, false);
+      } else if (typeof value === 'number') {
+        return objectPath.set(obj, path, 0);
+      } else if (isArray(value)) {
+        value.length = 0;
+      } else if (isObject(value)) {
+        for (i in value) {
+          if (hasShallowProperty(value, i)) {
+            delete value[i];
+          }
+        }
+      } else {
+        return objectPath.set(obj, path, null);
+      }
+    };
+
+    objectPath.push = function (obj, path /*, values */){
+      var arr = objectPath.get(obj, path);
+      if (!isArray(arr)) {
+        arr = [];
+        objectPath.set(obj, path, arr);
+      }
+
+      arr.push.apply(arr, Array.prototype.slice.call(arguments, 2));
+    };
+
+    objectPath.coalesce = function (obj, paths, defaultValue) {
+      var value;
+
+      for (var i = 0, len = paths.length; i < len; i++) {
+        if ((value = objectPath.get(obj, paths[i])) !== void 0) {
+          return value;
+        }
+      }
+
+      return defaultValue;
+    };
+
+    objectPath.get = function (obj, path, defaultValue){
+      if (typeof path === 'number') {
+        path = [path];
+      }
+      if (!path || path.length === 0) {
+        return obj;
+      }
+      if (obj == null) {
+        return defaultValue;
+      }
+      if (typeof path === 'string') {
+        return objectPath.get(obj, path.split('.'), defaultValue);
+      }
+
+      var currentPath = getKey(path[0]);
+      var nextObj = getShallowProperty(obj, currentPath)
+      if (nextObj === void 0) {
+        return defaultValue;
+      }
+
+      if (path.length === 1) {
+        return nextObj;
+      }
+
+      return objectPath.get(obj[currentPath], path.slice(1), defaultValue);
+    };
+
+    objectPath.del = function del(obj, path) {
+      if (typeof path === 'number') {
+        path = [path];
+      }
+
+      if (obj == null) {
+        return obj;
+      }
+
+      if (isEmpty(path)) {
+        return obj;
+      }
+      if(typeof path === 'string') {
+        return objectPath.del(obj, path.split('.'));
+      }
+
+      var currentPath = getKey(path[0]);
+      if (!hasShallowProperty(obj, currentPath)) {
+        return obj;
+      }
+
+      if(path.length === 1) {
+        if (isArray(obj)) {
+          obj.splice(currentPath, 1);
+        } else {
+          delete obj[currentPath];
+        }
+      } else {
+        return objectPath.del(obj[currentPath], path.slice(1));
+      }
+
+      return obj;
+    }
+
+    return objectPath;
+  }
+
+  var mod = factory();
+  mod.create = factory;
+  mod.withInheritedProps = factory({includeInheritedProps: true})
+  return mod;
+});
+
+
+/***/ }),
+/* 5 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_RESULT__ = function () {

@@ -1,4 +1,6 @@
-var HtmlWebpackPlugin = require('html-webpack-plugin')
+/* eslint-env node */
+
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
   entry: './src/index.js',
@@ -21,4 +23,4 @@ module.exports = {
       template: './static/index.html'
     })
   ]
-}
+};

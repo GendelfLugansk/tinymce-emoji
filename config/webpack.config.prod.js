@@ -1,8 +1,10 @@
-const path = require('path')
-const webpack = require('webpack')
-const CopyWebpackPlugin = require('copy-webpack-plugin')
+/* eslint-env node */
 
-const pluginName = 'tinymce-emoji'
+const path = require('path');
+const webpack = require('webpack');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
+
+const pluginName = 'tinymce-emoji';
 
 module.exports = {
   entry: {
@@ -38,4 +40,4 @@ module.exports = {
       }
     ])
   ]
-}
+};

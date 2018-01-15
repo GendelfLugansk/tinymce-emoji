@@ -1,6 +1,7 @@
 import EmojiFile from './emoji';
 import twemoji from '../node_modules/twemoji/2/twemoji.amd';
 import domify from '../node_modules/domify';
+import objectPath from '../node_modules/object-path';
 
 const plugin = (editor) => {
   let add_space = true;
@@ -43,9 +44,9 @@ const plugin = (editor) => {
     twemoji_size = editor.settings.emoji_twemoji_size;
   }
 
-  let twemoji_button_size = 16;
-  if ("emoji_twemoji_button_size" in editor.settings) {
-    twemoji_button_size = editor.settings.emoji_twemoji_button_size;
+  let twemoji_preview_size = 72;
+  if ("emoji_twemoji_preview_size" in editor.settings) {
+    twemoji_preview_size = editor.settings.emoji_twemoji_preview_size;
   }
 
   let twemoji_attrs = {};
@@ -98,97 +99,151 @@ const plugin = (editor) => {
     folder: twemoji_folder
   };
 
-  const twemoji_params_button = JSON.parse(JSON.stringify(twemoji_params));
-  twemoji_params_button.attributes = () => {
+  const twemoji_params_preview = JSON.parse(JSON.stringify(twemoji_params));
+  twemoji_params_preview.attributes = () => {
     let attrs = JSON.parse(JSON.stringify(twemoji_attrs));
-    attrs.style = appendStyle(attrs.style, `width: ${twemoji_button_size}px; height: ${twemoji_button_size}px;`);
+    attrs.style = appendStyle(attrs.style, `width: ${twemoji_preview_size}px; height: ${twemoji_preview_size}px;`);
 
     return attrs;
   };
 
-  const getBody = new Promise((resolve, reject) => {
-    try {
-      const onclick = function (e) {
-        const target = e.target;
-        let span;
-        if (/^(SPAN)$/.test(target.nodeName)) {
-          span = target;
-        } else if (/^(IMG)$/.test(target.nodeName) && target.classList && target.classList.contains(twemoji_class_name)) {
-          span = target.closest('span');
+  function getItems() {
+    const onclick = function (e) {
+      const target = e.target;
+      let span;
+      if (/^(SPAN)$/.test(target.nodeName)) {
+        span = target;
+      } else if (/^(IMG)$/.test(target.nodeName) && target.classList && target.classList.contains(twemoji_class_name)) {
+        span = target.closest('span');
+      }
+      if (span) {
+        if (span.hasAttribute('data-chr')) {
+          let char = span.getAttribute('data-chr');
+          editor.execCommand('mceInsertContent', false, char + (add_space ? ' ' : ''));
         }
-        if (span) {
-          if (span.hasAttribute('data-chr')) {
-            let char = span.getAttribute('data-chr');
-            editor.execCommand('mceInsertContent', false, char + (add_space ? ' ' : ''));
-          }
-        }
-      };
-      let body = [];
-      let groupHtml = show_groups ? '' : '<div style="padding: 10px;">';
-      for (let group of EmojiFile) {
-        groupHtml = show_groups ? '<div style="padding: 10px;">' : groupHtml;
-        let tabIcon = '';
-        for (let subgroup of group.subGroups) {
-          groupHtml += show_subgroups ? '<p style="clear:both"><strong style="font-weight: bold;">' +
-            subgroup.name.split('-').join(' ').replace(/\b\w/g, l => l.toUpperCase()) + '</strong><br/>' : '';
-          for (let emoji of subgroup.emojis) {
-            if (tabIcon === '') {
-              tabIcon = emoji.emoji;
+      }
+    };
+
+    const onmouseover = function (e) {
+      if (!show_twemoji) {
+        return;
+      }
+
+      const target = e.target;
+      if (/^(SPAN)$/.test(target.nodeName) && target.hasAttribute('data-chr')) {
+        const body = target.closest('.mce-window-body');
+        if (body) {
+          const previewZone = body.querySelector('.tinymce-emoji-preview');
+          if (previewZone) {
+            const img = domify(twemoji.parse(target.getAttribute('data-chr'), twemoji_params_preview));
+            const oldImg = previewZone.querySelector('img');
+            if (oldImg) {
+              previewZone.replaceChild(img, oldImg);
+            } else {
+              previewZone.appendChild(img);
             }
-            groupHtml += '<span style="float:left; padding: 4px; font-size: 1.5em; cursor: pointer;" data-chr="' +
-              emoji.emoji + '">' + (show_twemoji ? twemoji.parse(emoji.emoji, twemoji_params) : emoji.emoji) +
-              '</span>';
           }
-          groupHtml += '</p>';
-        }
-        groupHtml += show_groups ? '</div>' : '';
-        if (show_groups) {
-          body.push({
-            type: 'container',
-            title: (show_tab_icons ? tabIcon + ' ' : '') + group.name,
-            html: groupHtml,
-            onclick
-          });
         }
       }
-      if (!show_groups) {
-        groupHtml += '</div>';
-        body.push({
-          type: 'container',
-          html: groupHtml,
-          onclick
-        });
-      }
-      resolve(body);
-    } catch (error) {
-      reject(error);
+    };
+
+    const items = [];
+
+    if (show_twemoji) {
+      const previewPanel = new tinymce.ui.FloatPanel({
+        type: 'floatPanel',
+        title: 'Preview',
+        html: `<div class="tinymce-emoji-preview" style="text-align: center; padding: 10px; height: ${twemoji_preview_size}px">${twemoji.parse(objectPath.get(EmojiFile, '0.subGroups.0.emojis.0.emoji', ''), twemoji_params_preview)}</div>`,
+        style: "top: auto; position: fixed;"
+      });
+      previewPanel.on('postrender', (e) => {
+        if (e.target && e.target.$el && e.target.$el[0]) {
+
+          /**
+           * As I have no f🤬ing idea at what moment tinymce changes top to 0px, I'll use timer
+           */
+          let el = e.target.$el[0];
+          const updater = () => {
+            if (el && el.style && el.parentNode) {
+              el.style.top = "auto";
+              setTimeout(updater, 100);
+            } else {
+              el = null;
+            }
+          };
+          updater();
+        }
+      });
+      items.push(previewPanel);
     }
 
-  });
+    const tabItems = [];
+    let containerHTML = '';
+    for (let group of EmojiFile) {
+      let groupHTML = '';
+
+      for (let subgroup of group.subGroups) {
+        if (show_subgroups) {
+          groupHTML += `<div style="clear:both"><strong style="font-weight: bold;">${subgroup.name.split('-').join(' ')
+            .replace(/\b\w/g, l => l.toUpperCase())}</strong></div>`;
+        }
+
+        groupHTML += '<div>';
+        for (let emoji of subgroup.emojis) {
+          groupHTML += `<span style="float:left; padding: 4px; font-size: 1.5em; cursor: pointer;" data-chr="${emoji
+            .emoji}">${emoji.emoji}</span>`;
+        }
+        groupHTML += '</div>';
+      }
+
+      if (show_groups) {
+        tabItems.push({
+          type: 'container',
+          title: show_tab_icons ? objectPath.get(group, 'subGroups.0.emojis.0.emoji', '') + ' ' + group.name : group.name,
+          html: `<div style="padding: 10px;">${groupHTML}</div>`
+        });
+      } else {
+        containerHTML += groupHTML
+      }
+    }
+
+    if (show_groups) {
+      items.push({
+        type: 'tabPanel',
+        items: tabItems,
+        onclick,
+        onmouseover
+      });
+    } else {
+      items.push({
+        type: 'container',
+        html: `<div style="padding: 10px;">${containerHTML}</div>`,
+        onclick,
+        onmouseover
+      });
+    }
+
+    return items;
+  }
 
   const default_dialog_width = show_tab_icons ? 1000 : 800;
 
   function showDialog() {
-    getBody.then(body => {
-      const win = editor.windowManager.open({
-        autoScroll: true,
-        width: dialog_width ? dialog_width : default_dialog_width,
-        height: dialog_height ? dialog_height : 600,
-        title: 'Insert Emoji',
-        bodyType: show_groups ? 'tabPanel' : 'container',
-        layout: 'fit',
-        body,
-        buttons: [{
-          text: 'Close',
-          onclick: () => {
-            win.close();
-          }
-        }]
-      });
-    }).catch(error => {
-      /*eslint-disable no-console*/
-      console.log(error);
-      /*eslint-enable no-console*/
+    const win = editor.windowManager.open({
+      autoScroll: true,
+      width: dialog_width ? dialog_width : default_dialog_width,
+      height: dialog_height ? dialog_height : 600,
+      title: 'Insert Emoji',
+      layout: 'flex',
+      direction: 'column',
+      align: 'stretch',
+      items: getItems(),
+      buttons: [{
+        text: 'Close',
+        onclick: () => {
+          win.close();
+        }
+      }]
     });
   }
 
@@ -197,12 +252,7 @@ const plugin = (editor) => {
   editor.addButton('tinymceEmoji', {
     text: '😀',
     icon: false,
-    cmd: 'emojiShowDialog',
-    onpostrender: function (e) {
-      if (show_twemoji && e.target && e.target.$el && e.target.$el[0]) {
-        twemoji.parse(e.target.$el[0], twemoji_params_button);
-      }
-    }
+    cmd: 'emojiShowDialog'
   });
 
   editor.addMenuItem('tinymceEmoji', {

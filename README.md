@@ -74,8 +74,8 @@ tinymce.init({
     ],
     toolbar: 'tinymceEmoji',
     emoji_show_twemoji: true, //Show twemoji in dialog and editor
-    emoji_twemoji_size: 72, //size of twemojis in dialog and editor, 36 by default
-    emoji_twemoji_button_size: 24, //16 by default, size of plugin button's icon,
+    emoji_twemoji_size: 36, //size of twemojis in editor, 36 by default
+    emoji_twemoji_preview_size: 72, //preview size, 72 by default,
     emoji_twemoji_attrs: {}, //custom attributes for twemoji images. You can't set src, alt, className, draggable
     emoji_twemoji_base: undefined, //base url for twemoji images, by default twitter's cdn, look into twemoji's repo for details
     emoji_twemoji_ext: '.svg', //.png by default, would not work without correct folder (72x72 for png or svg for svg)
