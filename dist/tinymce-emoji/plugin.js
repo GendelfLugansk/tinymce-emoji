@@ -166,6 +166,11 @@ var plugin = function plugin(editor) {
     twemoji_folder = editor.settings.emoji_twemoji_folder;
   }
 
+  var preview_label = 'Preview';
+  if ("emoji_twemoji_preview_label" in editor.settings) {
+    preview_label = editor.settings.emoji_twemoji_preview_label;
+  }
+
   var appendStyle = function appendStyle(orig, appendix) {
     var newStyleStr = orig;
 
@@ -195,7 +200,7 @@ var plugin = function plugin(editor) {
   var twemoji_params_preview = JSON.parse(JSON.stringify(twemoji_params));
   twemoji_params_preview.attributes = function () {
     var attrs = JSON.parse(JSON.stringify(twemoji_attrs));
-    attrs.style = appendStyle(attrs.style, 'width: ' + twemoji_preview_size + 'px; height: ' + twemoji_preview_size + 'px;');
+    attrs.style = appendStyle(attrs.style, 'width: ' + twemoji_preview_size + 'px; height: ' + twemoji_preview_size + 'px; vertical-align: middle;');
 
     return attrs;
   };
@@ -243,28 +248,38 @@ var plugin = function plugin(editor) {
     var items = [];
 
     if (show_twemoji) {
+      var style = "";
+      var firefox = navigator.userAgent.search("Firefox") > -1;
+      var chrome = navigator.userAgent.search("Chrome") > -1;
+      if (firefox || chrome) {
+        //Firefox and Chrome work with sticky
+        style += 'position: sticky;';
+      } else {
+        style += 'top: auto; position: fixed;';
+      }
       var previewPanel = new tinymce.ui.FloatPanel({
         type: 'floatPanel',
         title: 'Preview',
-        html: '<div class="tinymce-emoji-preview" style="text-align: center; padding: 10px; height: ' + twemoji_preview_size + 'px">' + _twemoji2.default.parse(_objectPath2.default.get(_emoji2.default, '0.subGroups.0.emojis.0.emoji', ''), twemoji_params_preview) + '</div>',
-        style: "top: auto; position: fixed;"
+        html: '<div class="tinymce-emoji-preview" style="text-align: center; padding: 10px; height: \n' + twemoji_preview_size + 'px; line-height: ' + twemoji_preview_size + 'px; position: relative;">\n<div style="position: absolute; top: 10px; right: 10px; font-weight: bold; font-size: 0.8em;">' + preview_label + '</div>\n' + _twemoji2.default.parse(_objectPath2.default.get(_emoji2.default, '0.subGroups.0.emojis.0.emoji', ''), twemoji_params_preview) + '</div>',
+        style: style
       });
       previewPanel.on('postrender', function (e) {
         if (e.target && e.target.$el && e.target.$el[0]) {
-
-          /**
-           * As I have no f🤬ing idea at what moment tinymce changes top to 0px, I'll use timer
-           */
-          var el = e.target.$el[0];
-          var updater = function updater() {
-            if (el && el.style && el.parentNode) {
-              el.style.top = "auto";
-              setTimeout(updater, 100);
-            } else {
-              el = null;
-            }
-          };
-          updater();
+          if (!(firefox || chrome)) {
+            /**
+             * As I have no f🤬ing idea at what moment tinymce changes top to 0px, I'll use timer
+             */
+            var el = e.target.$el[0];
+            var updater = function updater() {
+              if (el && el.style && el.parentNode) {
+                el.style.top = "auto";
+                setTimeout(updater, 100);
+              } else {
+                el = null;
+              }
+            };
+            updater();
+          }
         }
       });
       items.push(previewPanel);
@@ -383,7 +398,7 @@ var plugin = function plugin(editor) {
     return items;
   }
 
-  var default_dialog_width = show_tab_icons ? 1000 : 800;
+  var default_dialog_width = show_tab_icons ? 1000 : 850;
 
   function showDialog() {
     var win = editor.windowManager.open({
@@ -547,11 +562,6 @@ exports.default = [{
       "codes": ["263A", "FE0F"],
       "status": "fully-qualified",
       "emoji": "☺️",
-      "name": "smiling face"
-    }, {
-      "codes": ["263A"],
-      "status": "non-fully-qualified",
-      "emoji": "☺",
       "name": "smiling face"
     }, {
       "codes": ["1F642"],
@@ -11317,9 +11327,6 @@ exports.default = [{
       "emoji": "🇿🇼",
       "name": "Zimbabwe"
     }]
-  }, {
-    "name": "subdivision-flag",
-    "emojis": []
   }]
 }];
 

@@ -74,6 +74,11 @@ const plugin = (editor) => {
     twemoji_folder = editor.settings.emoji_twemoji_folder;
   }
 
+  let preview_label = 'Preview';
+  if ("emoji_twemoji_preview_label" in editor.settings) {
+    preview_label = editor.settings.emoji_twemoji_preview_label;
+  }
+
   const appendStyle = (orig, appendix) => {
     let newStyleStr = orig;
 
@@ -102,7 +107,7 @@ const plugin = (editor) => {
   const twemoji_params_preview = JSON.parse(JSON.stringify(twemoji_params));
   twemoji_params_preview.attributes = () => {
     let attrs = JSON.parse(JSON.stringify(twemoji_attrs));
-    attrs.style = appendStyle(attrs.style, `width: ${twemoji_preview_size}px; height: ${twemoji_preview_size}px;`);
+    attrs.style = appendStyle(attrs.style, `width: ${twemoji_preview_size}px; height: ${twemoji_preview_size}px; vertical-align: middle;`);
 
     return attrs;
   };
@@ -150,28 +155,41 @@ const plugin = (editor) => {
     const items = [];
 
     if (show_twemoji) {
+      let style = "";
+      const firefox = navigator.userAgent.search("Firefox") > -1;
+      const chrome = navigator.userAgent.search("Chrome") > -1;
+      if ( firefox || chrome) {
+        //Firefox and Chrome work with sticky
+        style += 'position: sticky;';
+      } else {
+        style += 'top: auto; position: fixed;';
+      }
       const previewPanel = new tinymce.ui.FloatPanel({
         type: 'floatPanel',
         title: 'Preview',
-        html: `<div class="tinymce-emoji-preview" style="text-align: center; padding: 10px; height: ${twemoji_preview_size}px">${twemoji.parse(objectPath.get(EmojiFile, '0.subGroups.0.emojis.0.emoji', ''), twemoji_params_preview)}</div>`,
-        style: "top: auto; position: fixed;"
+        html: `<div class="tinymce-emoji-preview" style="text-align: center; padding: 10px; height: 
+${twemoji_preview_size}px; line-height: ${twemoji_preview_size}px; position: relative;">
+<div style="position: absolute; top: 10px; right: 10px; font-weight: bold; font-size: 0.8em;">${preview_label}</div>
+${twemoji.parse(objectPath.get(EmojiFile, '0.subGroups.0.emojis.0.emoji', ''), twemoji_params_preview)}</div>`,
+        style: style
       });
       previewPanel.on('postrender', (e) => {
         if (e.target && e.target.$el && e.target.$el[0]) {
-
-          /**
-           * As I have no f🤬ing idea at what moment tinymce changes top to 0px, I'll use timer
-           */
-          let el = e.target.$el[0];
-          const updater = () => {
-            if (el && el.style && el.parentNode) {
-              el.style.top = "auto";
-              setTimeout(updater, 100);
-            } else {
-              el = null;
-            }
-          };
-          updater();
+          if (! (firefox || chrome)) {
+            /**
+             * As I have no f🤬ing idea at what moment tinymce changes top to 0px, I'll use timer
+             */
+            let el = e.target.$el[0];
+            const updater = () => {
+              if (el && el.style && el.parentNode) {
+                el.style.top = "auto";
+                setTimeout(updater, 100);
+              } else {
+                el = null;
+              }
+            };
+            updater();
+          }
         }
       });
       items.push(previewPanel);
@@ -226,7 +244,7 @@ const plugin = (editor) => {
     return items;
   }
 
-  const default_dialog_width = show_tab_icons ? 1000 : 800;
+  const default_dialog_width = show_tab_icons ? 1000 : 850;
 
   function showDialog() {
     const win = editor.windowManager.open({

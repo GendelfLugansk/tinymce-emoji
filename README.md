@@ -81,6 +81,7 @@ tinymce.init({
     emoji_twemoji_ext: '.svg', //.png by default, would not work without correct folder (72x72 for png or svg for svg)
     emoji_twemoji_folder: 'svg', //72x72 by default
     emoji_twemoji_class_name: 'twemoji', //img's class name, emoji by default
+    emoji_twemoji_preview_label: 'Preview area', //Preview area label, 'Preview' by default
     ...
 })
 ```

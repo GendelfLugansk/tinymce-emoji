@@ -152,14 +152,6 @@ export default [
           },
           {
             "codes": [
-              "263A"
-            ],
-            "status": "non-fully-qualified",
-            "emoji": "☺",
-            "name": "smiling face"
-          },
-          {
-            "codes": [
               "1F642"
             ],
             "status": "fully-qualified",
@@ -18379,10 +18371,6 @@ export default [
             "name": "Zimbabwe"
           }
         ]
-      },
-      {
-        "name": "subdivision-flag",
-        "emojis": []
       }
     ]
   }
